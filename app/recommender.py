@@ -205,8 +205,7 @@ SELECT
     p.product_category_name,
     prs.total_units_sold,
     prs.total_revenue,
-    prs.recommendation_score,
-    prs.last_refreshed
+    prs.recommendation_score
 FROM product_recommendation_scores prs
 JOIN products p ON prs.product_id = p.product_id
 ORDER BY prs.recommendation_score DESC

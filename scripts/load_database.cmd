@@ -8,7 +8,10 @@ set DB_NAME=nexcart_olist
 set DB_USER=postgres
 set DB_HOST=localhost
 set DB_PORT=5432
-set DATA_DIR=data
+set DATA_DIR=dataset
+if not exist "%DATA_DIR%\olist_customers_dataset.csv" (
+    set DATA_DIR=data
+)
 if not exist "%DATA_DIR%\olist_customers_dataset.csv" (
     set DATA_DIR=dataset_olist
 )
@@ -30,7 +33,7 @@ if errorlevel 1 (
 
 if not exist "%DATA_DIR%\olist_customers_dataset.csv" (
     echo Dataset files were not found.
-    echo Put the seven Olist CSV files inside data or dataset_olist.
+    echo Put the seven Olist CSV files inside dataset, data, or dataset_olist.
     exit /b 1
 )
 echo Using dataset folder: %DATA_DIR%

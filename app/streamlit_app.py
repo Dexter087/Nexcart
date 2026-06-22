@@ -25,6 +25,7 @@ from app.analytics import (  # noqa: E402
     get_row_counts,
 )
 from app.db import test_connection  # noqa: E402
+from app.display import to_display_df, translate_values  # noqa: E402
 from app.recommender import (  # noqa: E402
     get_customer_detail,
     get_precomputed_scores,
@@ -90,8 +91,9 @@ elif page == "Database Summary":
     st.subheader("Database Summary")
     if ok:
         counts = get_row_counts()
-        st.dataframe(counts, use_container_width=True, hide_index=True)
-        st.bar_chart(counts.set_index("table_name"))
+        st.dataframe(to_display_df(counts), use_container_width=True, hide_index=True)
+        counts_chart = translate_values(counts)
+        st.bar_chart(counts_chart.set_index("table_name"))
     else:
         st.warning("Fix the database connection before viewing row counts.")
 
@@ -106,21 +108,21 @@ elif page == "Recommendation Engine":
         sample_ids = get_sample_customer_ids(200)
         col1, col2 = st.columns([2, 1])
         with col1:
-            selected_customer = st.selectbox("Select customer_id", sample_ids)
-            custom_customer = st.text_input("Or paste another customer_id", value="")
+            selected_customer = st.selectbox("Select Customer ID", sample_ids)
+            custom_customer = st.text_input("Or paste another Customer ID", value="")
             customer_id = custom_customer.strip() or selected_customer
         with col2:
             top_n = st.slider("Number of recommendations", min_value=3, max_value=20, value=10)
 
         detail = get_customer_detail(customer_id)
         st.write("Customer details")
-        st.dataframe(detail, use_container_width=True, hide_index=True)
+        st.dataframe(to_display_df(detail), use_container_width=True, hide_index=True)
 
         if st.button("Generate Recommendations", type="primary"):
             with st.spinner("Running recommendation query..."):
                 recs, note = get_recommendations(customer_id, top_n)
             st.success(note)
-            st.dataframe(recs, use_container_width=True, hide_index=True)
+            st.dataframe(to_display_df(recs), use_container_width=True, hide_index=True)
     else:
         st.warning("Fix the database connection before generating recommendations.")
 
@@ -133,22 +135,23 @@ elif page == "SQL Analytics":
         with c1:
             state_df = get_orders_by_state(15)
             st.write("Top customer states by order count")
-            st.dataframe(state_df, use_container_width=True, hide_index=True)
+            st.dataframe(to_display_df(state_df), use_container_width=True, hide_index=True)
             st.bar_chart(state_df.set_index("customer_state"))
         with c2:
             review_df = get_review_summary()
             st.write("Review score distribution")
-            st.dataframe(review_df, use_container_width=True, hide_index=True)
+            st.dataframe(to_display_df(review_df), use_container_width=True, hide_index=True)
             st.bar_chart(review_df.set_index("review_score"))
 
         category_df = get_category_sales(15)
         st.write("Top product categories")
-        st.dataframe(category_df, use_container_width=True, hide_index=True)
-        st.bar_chart(category_df.set_index("product_category_name")[["total_items_sold"]])
+        st.dataframe(to_display_df(category_df), use_container_width=True, hide_index=True)
+        category_chart = translate_values(category_df)
+        st.bar_chart(category_chart.set_index("product_category_name")[["total_items_sold"]])
 
         payment_df = get_payment_summary()
         st.write("Payment method summary")
-        st.dataframe(payment_df, use_container_width=True, hide_index=True)
+        st.dataframe(to_display_df(payment_df), use_container_width=True, hide_index=True)
     else:
         st.warning("Fix the database connection before viewing analytics.")
 
@@ -160,7 +163,7 @@ elif page == "Performance Evidence":
     )
 
     perf = PERFORMANCE_SUMMARY.copy()
-    st.dataframe(perf, use_container_width=True, hide_index=True)
+    st.dataframe(to_display_df(perf), use_container_width=True, hide_index=True)
 
     chart_df = perf.dropna(subset=["before_index_ms", "after_index_ms"])[
         ["query", "before_index_ms", "after_index_ms"]
@@ -194,9 +197,10 @@ elif page == "Stored Procedure Demo":
 
         try:
             scores = get_precomputed_scores(10)
-            st.dataframe(scores, use_container_width=True, hide_index=True)
+            st.dataframe(to_display_df(scores), use_container_width=True, hide_index=True)
             if not scores.empty:
-                st.bar_chart(scores.set_index("product_id")[["recommendation_score"]])
+                score_chart = translate_values(scores)
+                st.bar_chart(score_chart.set_index("product_id")[["recommendation_score"]])
         except Exception as exc:
             st.warning(f"Score table not available yet: {exc}")
             st.info("Run queries/performance.sql first to create the score table and procedure.")

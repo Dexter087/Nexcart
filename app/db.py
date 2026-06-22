@@ -13,14 +13,35 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+def _get_streamlit_secret(name: str, default: str | None = None) -> str | None:
+    """Read a Streamlit secret when available; otherwise return default.
+
+    This lets the same code run locally from .env and on Streamlit Community Cloud
+    from the app's Secrets panel.
+    """
+    try:
+        import streamlit as st  # imported lazily so CLI/API use still works
+
+        if name in st.secrets:
+            return str(st.secrets[name])
+    except Exception:
+        pass
+    return default
+
+
 def get_db_config() -> dict:
-    """Read database settings from environment variables or .env."""
+    """Read database settings from Streamlit secrets, environment variables, or .env."""
+    host = _get_streamlit_secret("DB_HOST", os.getenv("DB_HOST", "localhost"))
+    port = _get_streamlit_secret("DB_PORT", os.getenv("DB_PORT", "5432"))
+    dbname = _get_streamlit_secret("DB_NAME", os.getenv("DB_NAME", "nexcart_olist"))
+    user = _get_streamlit_secret("DB_USER", os.getenv("DB_USER", "postgres"))
+    password = _get_streamlit_secret("DB_PASSWORD", os.getenv("DB_PASSWORD", ""))
     return {
-        "host": os.getenv("DB_HOST", "localhost"),
-        "port": int(os.getenv("DB_PORT", "5432")),
-        "dbname": os.getenv("DB_NAME", "nexcart_olist"),
-        "user": os.getenv("DB_USER", "postgres"),
-        "password": os.getenv("DB_PASSWORD", ""),
+        "host": host,
+        "port": int(port or 5432),
+        "dbname": dbname,
+        "user": user,
+        "password": password,
     }
 
 
