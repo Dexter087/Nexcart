@@ -48,7 +48,7 @@ Nexcart/
 ├── schema/
 │   ├── schema.sql
 │   └── er_diagram.png
-├── data/                         # preferred rubric folder name
+├── dataset/
 │   ├── README_DATA.md
 │   ├── olist_customers_dataset.csv
 │   ├── olist_sellers_dataset.csv
@@ -57,8 +57,6 @@ Nexcart/
 │   ├── olist_order_items_dataset.csv
 │   ├── olist_order_payments_dataset.csv
 │   └── olist_order_reviews_dataset.csv
-├── dataset_olist/                 # also supported by the load script
-│   └── README_DATA.md
 ├── queries/
 │   ├── queries.sql
 │   ├── performance.sql
@@ -76,8 +74,8 @@ Nexcart/
 │   ├── run_app.cmd
 │   └── run_api.cmd
 ├── report/
-│   ├── NexCart_Final_Report.pdf
-│   ├── NexCart_Final_Report.docx
+│   ├── Report.pdf
+│   ├── Report.docx
 │   └── performance_output.txt
 └── demo/
     └── demo_video_link.txt
@@ -87,7 +85,7 @@ Nexcart/
 
 ## 4. Dataset Files Required
 
-Place the following files inside `data/` for the strict final repository layout. If your local folder is already named `dataset_olist`, the provided load script supports that folder too:
+Place the following files inside `dataset/`:
 
 ```text
 olist_customers_dataset.csv
@@ -101,8 +99,6 @@ olist_order_reviews_dataset.csv
 
 The geolocation and category translation files are not required for the final implementation.
 
-The automated loader first checks `data/`; if those CSVs are not present, it checks `dataset_olist/`. This was added so the project is both rubric-friendly and compatible with the local folder name used during testing.
-
 ---
 
 ## 5. Full Setup Using Command Prompt
@@ -110,7 +106,7 @@ The automated loader first checks `data/`; if those CSVs are not present, it che
 Run all commands from the repository root. Example:
 
 ```cmd
-cd /d C:\Users\UserName\Downloads\Nexcart
+cd /d C:\Users\Daksh\Downloads\Nexcart
 ```
 
 ### Step 1 - Set PostgreSQL password for this Command Prompt session
@@ -153,7 +149,7 @@ This command does all of the following:
 1. drops any old `nexcart_olist` database,
 2. creates a fresh `nexcart_olist` database,
 3. runs `schema/schema.sql`,
-4. imports the seven CSV files from `data/` or `dataset_olist/`,
+4. imports the seven CSV files from `dataset/`,
 5. verifies row counts,
 6. runs `queries/performance.sql`,
 7. saves performance evidence to `report/performance_output.txt`.
@@ -179,8 +175,6 @@ If you do not want to use `scripts/load_database.cmd`, run these commands manual
 ```cmd
 set PGPASSWORD=PUT_YOUR_POSTGRES_PASSWORD_HERE
 set PATH=%PATH%;C:\Program Files\PostgreSQL\18\bin
-set DATA_DIR=data
-if not exist %DATA_DIR%\olist_customers_dataset.csv set DATA_DIR=dataset_olist
 ```
 
 ```cmd
@@ -193,13 +187,13 @@ psql -U postgres -h localhost -p 5432 -d nexcart_olist -f schema/schema.sql
 ```
 
 ```cmd
-psql -U postgres -h localhost -p 5432 -d nexcart_olist -c "\copy customers FROM '%DATA_DIR%/olist_customers_dataset.csv' WITH (FORMAT csv, HEADER true)"
-psql -U postgres -h localhost -p 5432 -d nexcart_olist -c "\copy sellers FROM '%DATA_DIR%/olist_sellers_dataset.csv' WITH (FORMAT csv, HEADER true)"
-psql -U postgres -h localhost -p 5432 -d nexcart_olist -c "\copy products FROM '%DATA_DIR%/olist_products_dataset.csv' WITH (FORMAT csv, HEADER true)"
-psql -U postgres -h localhost -p 5432 -d nexcart_olist -c "\copy orders FROM '%DATA_DIR%/olist_orders_dataset.csv' WITH (FORMAT csv, HEADER true)"
-psql -U postgres -h localhost -p 5432 -d nexcart_olist -c "\copy order_items FROM '%DATA_DIR%/olist_order_items_dataset.csv' WITH (FORMAT csv, HEADER true)"
-psql -U postgres -h localhost -p 5432 -d nexcart_olist -c "\copy order_payments FROM '%DATA_DIR%/olist_order_payments_dataset.csv' WITH (FORMAT csv, HEADER true)"
-psql -U postgres -h localhost -p 5432 -d nexcart_olist -c "\copy order_reviews FROM '%DATA_DIR%/olist_order_reviews_dataset.csv' WITH (FORMAT csv, HEADER true, ENCODING 'LATIN1')"
+psql -U postgres -h localhost -p 5432 -d nexcart_olist -c "\copy customers FROM 'dataset/olist_customers_dataset.csv' WITH (FORMAT csv, HEADER true)"
+psql -U postgres -h localhost -p 5432 -d nexcart_olist -c "\copy sellers FROM 'dataset/olist_sellers_dataset.csv' WITH (FORMAT csv, HEADER true)"
+psql -U postgres -h localhost -p 5432 -d nexcart_olist -c "\copy products FROM 'dataset/olist_products_dataset.csv' WITH (FORMAT csv, HEADER true)"
+psql -U postgres -h localhost -p 5432 -d nexcart_olist -c "\copy orders FROM 'dataset/olist_orders_dataset.csv' WITH (FORMAT csv, HEADER true)"
+psql -U postgres -h localhost -p 5432 -d nexcart_olist -c "\copy order_items FROM 'dataset/olist_order_items_dataset.csv' WITH (FORMAT csv, HEADER true)"
+psql -U postgres -h localhost -p 5432 -d nexcart_olist -c "\copy order_payments FROM 'dataset/olist_order_payments_dataset.csv' WITH (FORMAT csv, HEADER true)"
+psql -U postgres -h localhost -p 5432 -d nexcart_olist -c "\copy order_reviews FROM 'dataset/olist_order_reviews_dataset.csv' WITH (FORMAT csv, HEADER true, ENCODING 'LATIN1')"
 ```
 
 Verify row counts:
@@ -218,7 +212,23 @@ psql -U postgres -h localhost -p 5432 -d nexcart_olist -f queries/performance.sq
 
 ---
 
-## 7. Optional FastAPI Interface
+
+## 7. Generate a Random Customer ID for Testing
+
+During the demo, use a random valid customer ID to show that the recommendation output is generated from the database and is not fixed.
+
+For Windows Command Prompt, run this from the repository root:
+
+```cmd
+set PATH=%PATH%;C:\Program Files\PostgreSQL\18\bin
+psql -U postgres -h localhost -p 5432 -d nexcart_olist -At -c "SELECT c.customer_id FROM customers c JOIN orders o ON c.customer_id = o.customer_id JOIN order_items oi ON o.order_id = oi.order_id WHERE o.order_status IN ('delivered', 'shipped', 'invoiced', 'processing') GROUP BY c.customer_id ORDER BY RANDOM() LIMIT 1;"
+```
+
+Copy the generated `customer_id`, paste it into the **Recommendation Engine** section of the Streamlit app, and click **Generate Recommendations**.
+
+Run the same command again to get a different customer ID and show that the recommendations change.
+
+## 8. Optional FastAPI Interface
 
 The Streamlit app is the main demo interface. The FastAPI endpoint is included as explicit Python API evidence.
 
@@ -246,19 +256,9 @@ CLI test:
 .venv\Scripts\python.exe -m app.main --customer_id REPLACE_WITH_CUSTOMER_ID --top_n 5
 ```
 
-### Generate a random customer ID for testing
-
-To prove that the recommendation output is not fixed, generate a random valid customer ID from the loaded PostgreSQL database.
-
-For Command Prompt on Windows:
-
-```cmd
-set PATH=%PATH%;C:\Program Files\PostgreSQL\18\bin
-psql -U postgres -h localhost -p 5432 -d nexcart_olist -At -c "SELECT c.customer_id FROM customers c JOIN orders o ON c.customer_id = o.customer_id JOIN order_items oi ON o.order_id = oi.order_id WHERE o.order_status IN ('delivered', 'shipped', 'invoiced', 'processing') GROUP BY c.customer_id ORDER BY RANDOM() LIMIT 1;"
-
 ---
 
-## 8. Application Features
+## 9. Application Features
 
 The Streamlit app contains:
 
@@ -271,7 +271,7 @@ The Streamlit app contains:
 
 ---
 
-## 9. Recommendation Logic
+## 10. Recommendation Logic
 
 NexCart uses user-based collaborative filtering. The target customer is mapped to `customer_unique_id`, then the system finds products and product categories previously purchased by that customer. It searches for similar customers who bought overlapping products or categories, collects candidate products bought by those similar customers, removes products already purchased by the target customer, and ranks the remaining products.
 
@@ -287,7 +287,7 @@ These are present in `queries/recommendation_queries.sql` and in the SQL query i
 
 ---
 
-## 10. Performance Evidence
+## 11. Performance Evidence
 
 The performance script creates these indexes:
 
@@ -312,7 +312,7 @@ The full captured output is stored in `report/performance_output.txt`.
 
 ---
 
-## 11. Stored Procedure
+## 12. Stored Procedure
 
 `queries/performance.sql` creates and runs:
 
@@ -324,12 +324,31 @@ This procedure refreshes `product_recommendation_scores` using current order ite
 
 ---
 
-## 12. AI Usage Disclosure
+## 13. AI Usage Disclosure
 
 AI tools were used for brainstorming, debugging, code structuring, README drafting, and report writing support. The project files were reviewed and adapted for the NexCart schema, local PostgreSQL setup, Olist dataset structure, and final DBMS project requirements before submission.
 
 ---
 
-## 13. No Secrets Policy
+
+---
+
+## Local Demo / Deployment Note
+
+This version is designed for a local DBMS demo. The app connects to the local PostgreSQL database `nexcart_olist`, so it should be run with:
+
+```cmd
+scripts\run_app.cmd
+```
+
+Then open:
+
+```text
+http://localhost:8501
+```
+
+The Streamlit Cloud **Deploy** button should not be used unless the PostgreSQL database is also moved to a cloud database service, because Streamlit Cloud cannot connect to `localhost` on the laptop.
+
+## 14. No Secrets Policy
 
 No passwords or API keys should be committed. Local database credentials must stay in `.env`, which is excluded by `.gitignore`. Use `.env.example` only as a template.
