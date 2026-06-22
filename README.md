@@ -110,7 +110,7 @@ The automated loader first checks `data/`; if those CSVs are not present, it che
 Run all commands from the repository root. Example:
 
 ```cmd
-cd /d C:\Users\Daksh\Downloads\Nexcart
+cd /d C:\Users\UserName\Downloads\Nexcart
 ```
 
 ### Step 1 - Set PostgreSQL password for this Command Prompt session
