@@ -1,21 +1,16 @@
-# Python
+# Local secrets and environment files
+.env
+.streamlit/secrets.toml
+
+# Python cache and virtual environment
 __pycache__/
 *.py[cod]
 .venv/
 venv/
 
-# Local secrets
-.env
-.streamlit/secrets.toml
-
-# Local outputs
-*.log
-performance_output.txt
-
-# OS / editor
+# OS files
+desktop.ini
 .DS_Store
-Thumbs.db
-.vscode/
-.idea/
 
-echo desktop.ini
+# Local generated outputs
+*.log

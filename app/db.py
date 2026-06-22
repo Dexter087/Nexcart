@@ -1,4 +1,9 @@
-"""Database helpers for the NexCart PostgreSQL application."""
+"""Database helpers for the NexCart PostgreSQL application.
+
+The same code supports two modes:
+1. Local development using a .env file.
+2. Streamlit Community Cloud using st.secrets.
+"""
 
 from __future__ import annotations
 
@@ -29,26 +34,46 @@ def _get_streamlit_secret(name: str, default: str | None = None) -> str | None:
     return default
 
 
+def get_database_url() -> str | None:
+    """Return a full PostgreSQL URL if one was provided.
+
+    Neon and other cloud PostgreSQL providers often provide one complete URL.
+    The app checks several common names so deployment is easier.
+    """
+    return (
+        _get_streamlit_secret("DATABASE_URL", os.getenv("DATABASE_URL"))
+        or _get_streamlit_secret("CLOUD_DB_URL", os.getenv("CLOUD_DB_URL"))
+        or _get_streamlit_secret("DB_URL", os.getenv("DB_URL"))
+    )
+
+
 def get_db_config() -> dict:
-    """Read database settings from Streamlit secrets, environment variables, or .env."""
+    """Read individual database settings from Streamlit secrets, env vars, or .env."""
     host = _get_streamlit_secret("DB_HOST", os.getenv("DB_HOST", "localhost"))
     port = _get_streamlit_secret("DB_PORT", os.getenv("DB_PORT", "5432"))
     dbname = _get_streamlit_secret("DB_NAME", os.getenv("DB_NAME", "nexcart_olist"))
     user = _get_streamlit_secret("DB_USER", os.getenv("DB_USER", "postgres"))
     password = _get_streamlit_secret("DB_PASSWORD", os.getenv("DB_PASSWORD", ""))
+    sslmode = _get_streamlit_secret("DB_SSLMODE", os.getenv("DB_SSLMODE", "prefer"))
+
     return {
         "host": host,
         "port": int(port or 5432),
         "dbname": dbname,
         "user": user,
         "password": password,
+        "sslmode": sslmode,
     }
 
 
 @contextmanager
 def get_connection() -> Iterator[psycopg2.extensions.connection]:
     """Open and close a PostgreSQL connection."""
-    conn = psycopg2.connect(**get_db_config())
+    database_url = get_database_url()
+    if database_url:
+        conn = psycopg2.connect(database_url)
+    else:
+        conn = psycopg2.connect(**get_db_config())
     try:
         yield conn
     finally:
