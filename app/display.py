@@ -42,6 +42,7 @@ COLUMN_LABELS = {
     "similar_purchase_count": "Similar Purchase Count",
     "recommendation_score": "Recommendation Score",
     "recommendation_rank": "Recommendation Rank",
+    "recommendation_source": "Recommendation Source",
     "query": "Query",
     "before_index_ms": "Before Index (ms)",
     "after_index_ms": "After Index (ms)",

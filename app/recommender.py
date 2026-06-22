@@ -3,6 +3,8 @@
 The main method implements user-based collaborative filtering in SQL. It finds
 customers with overlapping product/category behaviour, gathers candidate products
 from those similar customers, and ranks candidates using SQL window functions.
+If a selected customer has limited overlap, the function fills the remaining
+rows using the popularity-based fallback so the demo can still show top-N output.
 """
 
 from __future__ import annotations
@@ -23,6 +25,24 @@ LIMIT %s;
 """
 
 
+DEMO_CUSTOMERS_QUERY = """
+SELECT
+    c.customer_id,
+    c.customer_city,
+    c.customer_state,
+    COUNT(DISTINCT o.order_id) AS total_orders,
+    COUNT(oi.product_id) AS total_items,
+    ROUND(COALESCE(SUM(oi.price), 0)::numeric, 2) AS total_item_value
+FROM customers c
+JOIN orders o ON c.customer_id = o.customer_id
+JOIN order_items oi ON o.order_id = oi.order_id
+WHERE o.order_status IN ('delivered', 'shipped', 'invoiced', 'processing')
+GROUP BY c.customer_id, c.customer_city, c.customer_state
+ORDER BY total_items DESC, total_item_value DESC, c.customer_id
+LIMIT %s;
+"""
+
+
 CUSTOMER_DETAIL_QUERY = """
 SELECT
     c.customer_id,
@@ -31,7 +51,7 @@ SELECT
     c.customer_state,
     COUNT(DISTINCT o.order_id) AS total_orders,
     COUNT(oi.product_id) AS total_items,
-    COALESCE(SUM(oi.price), 0) AS total_item_value
+    ROUND(COALESCE(SUM(oi.price), 0)::numeric, 2) AS total_item_value
 FROM customers c
 LEFT JOIN orders o ON c.customer_id = o.customer_id
 LEFT JOIN order_items oi ON o.order_id = oi.order_id
@@ -153,7 +173,8 @@ SELECT
     similar_customer_count,
     similar_purchase_count,
     recommendation_score,
-    recommendation_rank
+    recommendation_rank,
+    'Collaborative filtering' AS recommendation_source
 FROM ranked_products
 WHERE category_row_number <= 3
 ORDER BY recommendation_rank
@@ -178,20 +199,24 @@ ranked AS (
         product_id,
         product_category_name,
         ROUND(avg_price::numeric, 2) AS avg_price,
+        NULL::integer AS similar_customer_count,
         total_units_sold AS similar_purchase_count,
-        total_revenue AS recommendation_score,
+        ROUND(total_revenue::numeric, 2) AS recommendation_score,
         RANK() OVER (ORDER BY total_units_sold DESC, total_revenue DESC) AS recommendation_rank,
-        ROW_NUMBER() OVER (PARTITION BY product_category_name ORDER BY total_units_sold DESC, total_revenue DESC) AS category_row_number
+        ROW_NUMBER() OVER (PARTITION BY product_category_name ORDER BY total_units_sold DESC, total_revenue DESC) AS category_row_number,
+        'Popularity fallback' AS recommendation_source
     FROM product_sales
+    WHERE (%s::text[] IS NULL OR product_id <> ALL(%s::text[]))
 )
 SELECT
     product_id,
     product_category_name,
     avg_price,
-    NULL::integer AS similar_customer_count,
+    similar_customer_count,
     similar_purchase_count,
-    ROUND(recommendation_score::numeric, 2) AS recommendation_score,
-    recommendation_rank
+    recommendation_score,
+    recommendation_rank,
+    recommendation_source
 FROM ranked
 WHERE category_row_number <= 3
 ORDER BY recommendation_rank
@@ -218,16 +243,38 @@ def get_sample_customer_ids(limit: int = 100) -> list[str]:
     return df["customer_id"].tolist()
 
 
+def get_demo_customer_ids(limit: int = 15) -> pd.DataFrame:
+    """Return customer IDs that are useful for testing/demo output."""
+    return run_query(DEMO_CUSTOMERS_QUERY, (limit,))
+
+
 def get_customer_detail(customer_id: str) -> pd.DataFrame:
     return run_query(CUSTOMER_DETAIL_QUERY, (customer_id,))
+
+
+def _fallback_recommendations(top_n: int, exclude_product_ids: list[str] | None = None) -> pd.DataFrame:
+    exclude_product_ids = exclude_product_ids or []
+    exclude_param = exclude_product_ids if exclude_product_ids else None
+    return run_query(POPULARITY_FALLBACK_QUERY, (exclude_param, exclude_param, top_n))
 
 
 def get_recommendations(customer_id: str, top_n: int = 10) -> tuple[pd.DataFrame, str]:
     """Return top-N recommendations and a note about the strategy used."""
     recs = run_query(RECOMMENDATION_QUERY, (customer_id, top_n))
+
     if recs.empty:
-        recs = run_query(POPULARITY_FALLBACK_QUERY, (top_n,))
-        return recs, "Popularity fallback used because this customer has too little usable purchase overlap."
+        fallback = _fallback_recommendations(top_n)
+        return fallback, "Popularity fallback used because this customer has too little usable purchase overlap."
+
+    if len(recs) < top_n:
+        needed = top_n - len(recs)
+        already_selected = recs["product_id"].astype(str).tolist()
+        filler = _fallback_recommendations(needed, already_selected)
+        combined = pd.concat([recs, filler], ignore_index=True)
+        return combined.head(top_n), (
+            "Collaborative filtering produced limited rows, so popularity fallback filled the remaining recommendations."
+        )
+
     return recs, "Collaborative filtering used based on overlapping product/category purchases."
 
 

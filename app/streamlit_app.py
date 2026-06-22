@@ -9,7 +9,6 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-import pandas as pd
 import streamlit as st
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -28,6 +27,7 @@ from app.db import test_connection  # noqa: E402
 from app.display import to_display_df, translate_values  # noqa: E402
 from app.recommender import (  # noqa: E402
     get_customer_detail,
+    get_demo_customer_ids,
     get_precomputed_scores,
     get_recommendations,
     get_sample_customer_ids,
@@ -66,6 +66,52 @@ with st.sidebar:
         st.write(message)
 
 
+def customer_recommendation_widget(widget_key: str = "main") -> None:
+    """Reusable customer-ID recommendation UI."""
+    demo_customers = get_demo_customer_ids(15)
+    demo_ids = demo_customers["customer_id"].tolist()
+
+    st.write("**15 demo Customer IDs**")
+    st.caption("Use any of these during the demo to show that the output changes with the selected customer.")
+    st.dataframe(to_display_df(demo_customers), use_container_width=True, hide_index=True)
+
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        selected_customer = st.selectbox(
+            "Select Customer ID",
+            demo_ids if demo_ids else get_sample_customer_ids(200),
+            key=f"{widget_key}_select_customer",
+        )
+        custom_customer = st.text_input(
+            "Or paste another Customer ID",
+            value="",
+            key=f"{widget_key}_custom_customer",
+        )
+        customer_id = custom_customer.strip() or selected_customer
+    with col2:
+        top_n = st.slider(
+            "Number of recommendations",
+            min_value=3,
+            max_value=20,
+            value=10,
+            key=f"{widget_key}_top_n",
+        )
+
+    detail = get_customer_detail(customer_id)
+    st.write("Customer details")
+    st.dataframe(to_display_df(detail), use_container_width=True, hide_index=True)
+
+    if st.button("Generate Recommendations", type="primary", key=f"{widget_key}_generate"):
+        with st.spinner("Running customer-specific recommendation query..."):
+            recs, note = get_recommendations(customer_id, top_n)
+        st.success(note)
+        st.dataframe(to_display_df(recs), use_container_width=True, hide_index=True)
+        st.caption(
+            "Rows marked as collaborative filtering come from similar-customer overlap. "
+            "Rows marked as popularity fallback are used only when a sparse customer does not produce enough overlap-based candidates."
+        )
+
+
 if page == "Home":
     st.subheader("Project Overview")
     st.write(
@@ -82,9 +128,8 @@ if page == "Home":
     c3.metric("Track", "B - Recommendation Engine")
 
     st.info(
-        "Use the sidebar to check database row counts, generate recommendations, "
-        "view analytics, inspect performance results, and refresh precomputed "
-        "recommendation scores."
+        "Use the sidebar to check database row counts, generate customer-specific recommendations, "
+        "view analytics, inspect performance results, and refresh precomputed recommendation scores."
     )
 
 elif page == "Database Summary":
@@ -105,24 +150,7 @@ elif page == "Recommendation Engine":
     )
 
     if ok:
-        sample_ids = get_sample_customer_ids(200)
-        col1, col2 = st.columns([2, 1])
-        with col1:
-            selected_customer = st.selectbox("Select Customer ID", sample_ids)
-            custom_customer = st.text_input("Or paste another Customer ID", value="")
-            customer_id = custom_customer.strip() or selected_customer
-        with col2:
-            top_n = st.slider("Number of recommendations", min_value=3, max_value=20, value=10)
-
-        detail = get_customer_detail(customer_id)
-        st.write("Customer details")
-        st.dataframe(to_display_df(detail), use_container_width=True, hide_index=True)
-
-        if st.button("Generate Recommendations", type="primary"):
-            with st.spinner("Running recommendation query..."):
-                recs, note = get_recommendations(customer_id, top_n)
-            st.success(note)
-            st.dataframe(to_display_df(recs), use_container_width=True, hide_index=True)
+        customer_recommendation_widget("recommendation_page")
     else:
         st.warning("Fix the database connection before generating recommendations.")
 
@@ -181,13 +209,13 @@ elif page == "Performance Evidence":
 elif page == "Stored Procedure Demo":
     st.subheader("Stored Procedure / Recommendation Score Refresh")
     st.write(
-        "The performance SQL file creates `product_recommendation_scores` and the stored "
-        "procedure `refresh_product_recommendation_scores()`. Use this page to refresh and "
-        "display the precomputed scores."
+        "This page demonstrates the database-side stored procedure and also lets you run "
+        "customer-specific recommendations. The stored procedure refreshes global product score data; "
+        "the customer-specific generator below uses the collaborative-filtering query."
     )
 
     if ok:
-        if st.button("Refresh recommendation scores", type="primary"):
+        if st.button("Refresh global recommendation scores", type="primary"):
             try:
                 refresh_recommendation_scores()
                 st.success("Stored procedure executed successfully.")
@@ -196,13 +224,19 @@ elif page == "Stored Procedure Demo":
                 st.info("Run queries/performance.sql once before using this page.")
 
         try:
+            st.write("Global precomputed scores from `product_recommendation_scores`")
             scores = get_precomputed_scores(10)
             st.dataframe(to_display_df(scores), use_container_width=True, hide_index=True)
-            if not scores.empty:
-                score_chart = translate_values(scores)
-                st.bar_chart(score_chart.set_index("product_id")[["recommendation_score"]])
         except Exception as exc:
             st.warning(f"Score table not available yet: {exc}")
             st.info("Run queries/performance.sql first to create the score table and procedure.")
+
+        st.divider()
+        st.subheader("Customer-specific recommendation test")
+        st.write(
+            "Use this section during the demo to prove that the recommendation output changes "
+            "when a different Customer ID is selected."
+        )
+        customer_recommendation_widget("stored_proc_page")
     else:
         st.warning("Fix the database connection before running stored procedure demo.")
