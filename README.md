@@ -48,7 +48,7 @@ Nexcart/
 ├── schema/
 │   ├── schema.sql
 │   └── er_diagram.png
-├── dataset_olist/
+├── data/                         # preferred rubric folder name
 │   ├── README_DATA.md
 │   ├── olist_customers_dataset.csv
 │   ├── olist_sellers_dataset.csv
@@ -57,6 +57,8 @@ Nexcart/
 │   ├── olist_order_items_dataset.csv
 │   ├── olist_order_payments_dataset.csv
 │   └── olist_order_reviews_dataset.csv
+├── dataset_olist/                 # also supported by the load script
+│   └── README_DATA.md
 ├── queries/
 │   ├── queries.sql
 │   ├── performance.sql
@@ -85,7 +87,7 @@ Nexcart/
 
 ## 4. Dataset Files Required
 
-Place the following files inside `dataset_olist/`:
+Place the following files inside `data/` for the strict final repository layout. If your local folder is already named `dataset_olist`, the provided load script supports that folder too:
 
 ```text
 olist_customers_dataset.csv
@@ -98,6 +100,8 @@ olist_order_reviews_dataset.csv
 ```
 
 The geolocation and category translation files are not required for the final implementation.
+
+The automated loader first checks `data/`; if those CSVs are not present, it checks `dataset_olist/`. This was added so the project is both rubric-friendly and compatible with the local folder name used during testing.
 
 ---
 
@@ -149,7 +153,7 @@ This command does all of the following:
 1. drops any old `nexcart_olist` database,
 2. creates a fresh `nexcart_olist` database,
 3. runs `schema/schema.sql`,
-4. imports the seven CSV files from `dataset_olist/`,
+4. imports the seven CSV files from `data/` or `dataset_olist/`,
 5. verifies row counts,
 6. runs `queries/performance.sql`,
 7. saves performance evidence to `report/performance_output.txt`.
@@ -175,6 +179,8 @@ If you do not want to use `scripts/load_database.cmd`, run these commands manual
 ```cmd
 set PGPASSWORD=PUT_YOUR_POSTGRES_PASSWORD_HERE
 set PATH=%PATH%;C:\Program Files\PostgreSQL\18\bin
+set DATA_DIR=data
+if not exist %DATA_DIR%\olist_customers_dataset.csv set DATA_DIR=dataset_olist
 ```
 
 ```cmd
@@ -187,13 +193,13 @@ psql -U postgres -h localhost -p 5432 -d nexcart_olist -f schema/schema.sql
 ```
 
 ```cmd
-psql -U postgres -h localhost -p 5432 -d nexcart_olist -c "\copy customers FROM 'dataset_olist/olist_customers_dataset.csv' WITH (FORMAT csv, HEADER true)"
-psql -U postgres -h localhost -p 5432 -d nexcart_olist -c "\copy sellers FROM 'dataset_olist/olist_sellers_dataset.csv' WITH (FORMAT csv, HEADER true)"
-psql -U postgres -h localhost -p 5432 -d nexcart_olist -c "\copy products FROM 'dataset_olist/olist_products_dataset.csv' WITH (FORMAT csv, HEADER true)"
-psql -U postgres -h localhost -p 5432 -d nexcart_olist -c "\copy orders FROM 'dataset_olist/olist_orders_dataset.csv' WITH (FORMAT csv, HEADER true)"
-psql -U postgres -h localhost -p 5432 -d nexcart_olist -c "\copy order_items FROM 'dataset_olist/olist_order_items_dataset.csv' WITH (FORMAT csv, HEADER true)"
-psql -U postgres -h localhost -p 5432 -d nexcart_olist -c "\copy order_payments FROM 'dataset_olist/olist_order_payments_dataset.csv' WITH (FORMAT csv, HEADER true)"
-psql -U postgres -h localhost -p 5432 -d nexcart_olist -c "\copy order_reviews FROM 'dataset_olist/olist_order_reviews_dataset.csv' WITH (FORMAT csv, HEADER true, ENCODING 'LATIN1')"
+psql -U postgres -h localhost -p 5432 -d nexcart_olist -c "\copy customers FROM '%DATA_DIR%/olist_customers_dataset.csv' WITH (FORMAT csv, HEADER true)"
+psql -U postgres -h localhost -p 5432 -d nexcart_olist -c "\copy sellers FROM '%DATA_DIR%/olist_sellers_dataset.csv' WITH (FORMAT csv, HEADER true)"
+psql -U postgres -h localhost -p 5432 -d nexcart_olist -c "\copy products FROM '%DATA_DIR%/olist_products_dataset.csv' WITH (FORMAT csv, HEADER true)"
+psql -U postgres -h localhost -p 5432 -d nexcart_olist -c "\copy orders FROM '%DATA_DIR%/olist_orders_dataset.csv' WITH (FORMAT csv, HEADER true)"
+psql -U postgres -h localhost -p 5432 -d nexcart_olist -c "\copy order_items FROM '%DATA_DIR%/olist_order_items_dataset.csv' WITH (FORMAT csv, HEADER true)"
+psql -U postgres -h localhost -p 5432 -d nexcart_olist -c "\copy order_payments FROM '%DATA_DIR%/olist_order_payments_dataset.csv' WITH (FORMAT csv, HEADER true)"
+psql -U postgres -h localhost -p 5432 -d nexcart_olist -c "\copy order_reviews FROM '%DATA_DIR%/olist_order_reviews_dataset.csv' WITH (FORMAT csv, HEADER true, ENCODING 'LATIN1')"
 ```
 
 Verify row counts:

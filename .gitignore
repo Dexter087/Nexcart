@@ -17,3 +17,5 @@ performance_output.txt
 Thumbs.db
 .vscode/
 .idea/
+
+echo desktop.ini
