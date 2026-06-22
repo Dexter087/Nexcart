@@ -1,1 +1,1 @@
-"""NexCart recommendation API package."""
+"""NexCart application package."""

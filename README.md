@@ -1,8 +1,9 @@
 # NexCart - E-commerce Recommendation System
 
 **Course:** Z2004 Database Management Systems  
-**Project Track:** Track B - AI Recommendation Engine  
+**Track:** Track B - AI Recommendation Engine  
 **Database:** PostgreSQL  
+**Application:** Local Streamlit dashboard + optional FastAPI endpoint  
 **Repository:** https://github.com/Dexter087/Nexcart.git
 
 ## Team Members
@@ -11,22 +12,29 @@
 2. Manoj Phani Varma Vadapalli - ZDA24B040
 3. V S S Preeti Ananya Yamali - ZDA24B002
 
+---
+
 ## 1. Project Overview
 
-NexCart is a relational e-commerce recommendation system built using PostgreSQL and a Python API. The system is based on the Olist Brazilian E-Commerce Public Dataset and stores customers, sellers, products, orders, order items, payments, and reviews in a normalized relational schema.
+NexCart is a PostgreSQL-backed e-commerce recommendation system based on the Olist marketplace dataset. The database stores customers, sellers, products, orders, order items, payments, and reviews in a normalized relational schema. The application recommends products for a selected customer using SQL-based collaborative filtering.
 
-The main goal of the project is to recommend top-N products for a given customer using purchase history. The recommendation logic is implemented using SQL joins, CTEs, and window functions, while the Python API exposes the recommendation output through a simple endpoint.
+The final app runs locally using Streamlit and connects to a local PostgreSQL database through `.env` variables.
 
-## 2. Track B Requirement Mapping
+---
+
+## 2. Requirement Mapping
 
 | Track B Requirement | NexCart Implementation |
 |---|---|
-| Normalized PostgreSQL database with at least 5 tables | 7 core relational tables: customers, sellers, products, orders, order_items, order_payments, order_reviews |
-| At least 2000 rows of transactional data | Olist dataset contains large-scale transactional e-commerce records |
-| Collaborative filtering using SQL window functions | `queries/recommendation_queries.sql` and `app/recommender.py` use customer purchase overlap and ranking functions |
-| Python API returning top-N recommendations | FastAPI app in `app/main.py` |
-| Performance benchmark with and without indexes | `queries/performance.sql` contains before-index and after-index EXPLAIN ANALYZE blocks |
-| Stored procedure or trigger updating recommendation scores | `refresh_product_recommendation_scores()` procedure in `queries/performance.sql` |
+| Normalized database with at least 5 tables | 7 core PostgreSQL tables |
+| At least 2000 rows of transactional data | Olist dataset with 112,650 order item rows |
+| Collaborative filtering using SQL window functions | Implemented in `queries/recommendation_queries.sql` and `app/recommender.py` |
+| Python API returning top-N recommendations | `app/main.py` FastAPI endpoint and CLI |
+| App/demo interface | `app/streamlit_app.py` Streamlit dashboard |
+| Performance benchmark with and without indexes | `queries/performance.sql` and `report/performance_output.txt` |
+| Stored procedure or trigger | `refresh_product_recommendation_scores()` in `queries/performance.sql` |
+
+---
 
 ## 3. Repository Structure
 
@@ -35,11 +43,20 @@ Nexcart/
 ├── README.md
 ├── requirements.txt
 ├── .env.example
+├── .gitignore
+├── LICENSE
 ├── schema/
 │   ├── schema.sql
 │   └── er_diagram.png
-├── data/
-│   └── README_DATA.md
+├── dataset_olist/
+│   ├── README_DATA.md
+│   ├── olist_customers_dataset.csv
+│   ├── olist_sellers_dataset.csv
+│   ├── olist_products_dataset.csv
+│   ├── olist_orders_dataset.csv
+│   ├── olist_order_items_dataset.csv
+│   ├── olist_order_payments_dataset.csv
+│   └── olist_order_reviews_dataset.csv
 ├── queries/
 │   ├── queries.sql
 │   ├── performance.sql
@@ -47,206 +64,216 @@ Nexcart/
 ├── app/
 │   ├── __init__.py
 │   ├── db.py
+│   ├── analytics.py
 │   ├── recommender.py
-│   └── main.py
+│   ├── main.py
+│   └── streamlit_app.py
+├── scripts/
+│   ├── setup_env.cmd
+│   ├── load_database.cmd
+│   ├── run_app.cmd
+│   └── run_api.cmd
 ├── report/
+│   ├── NexCart_Final_Report.pdf
 │   ├── NexCart_Final_Report.docx
-│   └── NexCart_Final_Report.pdf
+│   └── performance_output.txt
 └── demo/
-    └── demo_script.txt
+    └── demo_video_link.txt
 ```
 
-## 4. Dataset
+---
 
-The project uses the Olist Brazilian E-Commerce Public Dataset. The following CSV files are required:
+## 4. Dataset Files Required
 
-1. `olist_customers_dataset.csv`
-2. `olist_sellers_dataset.csv`
-3. `olist_products_dataset.csv`
-4. `olist_orders_dataset.csv`
-5. `olist_order_items_dataset.csv`
-6. `olist_order_payments_dataset.csv`
-7. `olist_order_reviews_dataset.csv`
-
-The geolocation file is not used in the final implementation. The category translation file is also not used because the final working schema stores `product_category_name` directly in the `products` table.
-
-## 5. Final Working Tables
-
-| Table | Purpose |
-|---|---|
-| `customers` | Stores customer identity and location fields |
-| `sellers` | Stores marketplace seller details |
-| `products` | Stores product details and category names |
-| `orders` | Stores order-level transaction records |
-| `order_items` | Links orders to products and sellers |
-| `order_payments` | Stores payment method and payment value details |
-| `order_reviews` | Stores review scores and review messages |
-| `product_recommendation_scores` | Created by `performance.sql`; stores refreshed product-level recommendation scores |
-
-## 6. Setup Instructions
-
-### Step 1 - Create and activate a Python environment
-
-```bash
-python -m venv .venv
-.venv\Scripts\activate
-```
-
-On macOS/Linux:
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-```
-
-### Step 2 - Install dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-### Step 3 - Create the PostgreSQL database
-
-Open pgAdmin or psql and create the database:
-
-```sql
-CREATE DATABASE nexcart_olist;
-```
-
-### Step 4 - Run the schema
-
-Run:
-
-```sql
-\i schema/schema.sql
-```
-
-If using pgAdmin, open `schema/schema.sql` in Query Tool and execute it inside the `nexcart_olist` database.
-
-### Step 5 - Import the CSV files
-
-Import the dataset files in this exact order:
-
-1. `customers` <- `olist_customers_dataset.csv`
-2. `sellers` <- `olist_sellers_dataset.csv`
-3. `products` <- `olist_products_dataset.csv`
-4. `orders` <- `olist_orders_dataset.csv`
-5. `order_items` <- `olist_order_items_dataset.csv`
-6. `order_payments` <- `olist_order_payments_dataset.csv`
-7. `order_reviews` <- `olist_order_reviews_dataset.csv`
-
-Use these import settings in pgAdmin:
+Place the following files inside `dataset_olist/`:
 
 ```text
-Format: CSV
-Header: Yes
-Delimiter: ,
-Quote: "
-Escape: "
-Encoding: UTF8
+olist_customers_dataset.csv
+olist_sellers_dataset.csv
+olist_products_dataset.csv
+olist_orders_dataset.csv
+olist_order_items_dataset.csv
+olist_order_payments_dataset.csv
+olist_order_reviews_dataset.csv
 ```
 
-### Step 6 - Verify row counts
+The geolocation and category translation files are not required for the final implementation.
 
-```sql
-SELECT 'customers' AS table_name, COUNT(*) FROM customers
-UNION ALL SELECT 'sellers', COUNT(*) FROM sellers
-UNION ALL SELECT 'products', COUNT(*) FROM products
-UNION ALL SELECT 'orders', COUNT(*) FROM orders
-UNION ALL SELECT 'order_items', COUNT(*) FROM order_items
-UNION ALL SELECT 'order_payments', COUNT(*) FROM order_payments
-UNION ALL SELECT 'order_reviews', COUNT(*) FROM order_reviews;
+---
+
+## 5. Full Setup Using Command Prompt
+
+Run all commands from the repository root. Example:
+
+```cmd
+cd /d C:\Users\Daksh\Downloads\Nexcart
 ```
 
-### Step 7 - Run analytical SQL queries
+### Step 1 - Set PostgreSQL password for this Command Prompt session
 
-Run:
+Replace the password value with your local PostgreSQL password.
 
-```sql
-\i queries/queries.sql
+```cmd
+set PGPASSWORD=PUT_YOUR_POSTGRES_PASSWORD_HERE
 ```
 
-In pgAdmin, open `queries/queries.sql` and execute the queries one by one.
+### Step 2 - Check that PostgreSQL command-line tools are available
 
-### Step 8 - Run performance and recommendation score setup
-
-Run:
-
-```sql
-\i queries/performance.sql
+```cmd
+psql --version
 ```
 
-This script checks dataset size, runs EXPLAIN ANALYZE before indexing, creates indexes, runs EXPLAIN ANALYZE after indexing, creates the recommendation score table, and runs the stored procedure.
+If `psql` is not recognized, run:
 
-## 7. Python API Setup
+```cmd
+set PATH=%PATH%;C:\Program Files\PostgreSQL\18\bin
+psql --version
+```
 
-### Step 1 - Create `.env`
+### Step 3 - Create Python environment and `.env`
 
-Copy `.env.example` to `.env` and update your PostgreSQL password.
+```cmd
+scripts\setup_env.cmd
+```
+
+This creates `.venv`, installs Python packages, and writes a local `.env` file. Do not commit `.env`.
+
+### Step 4 - Load the database from scratch
+
+```cmd
+scripts\load_database.cmd
+```
+
+This command does all of the following:
+
+1. drops any old `nexcart_olist` database,
+2. creates a fresh `nexcart_olist` database,
+3. runs `schema/schema.sql`,
+4. imports the seven CSV files from `dataset_olist/`,
+5. verifies row counts,
+6. runs `queries/performance.sql`,
+7. saves performance evidence to `report/performance_output.txt`.
+
+### Step 5 - Start the Streamlit app
+
+```cmd
+scripts\run_app.cmd
+```
+
+Then open:
 
 ```text
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=nexcart_olist
-DB_USER=postgres
-DB_PASSWORD=your_postgres_password
+http://localhost:8501
 ```
 
-### Step 2 - Start the API
+---
 
-```bash
-uvicorn app.main:app --reload
+## 6. Manual Database Loading Commands
+
+If you do not want to use `scripts/load_database.cmd`, run these commands manually from the repository root.
+
+```cmd
+set PGPASSWORD=PUT_YOUR_POSTGRES_PASSWORD_HERE
+set PATH=%PATH%;C:\Program Files\PostgreSQL\18\bin
 ```
 
-Open the interactive API documentation:
+```cmd
+psql -U postgres -h localhost -p 5432 -d postgres -c "DROP DATABASE IF EXISTS nexcart_olist WITH (FORCE);"
+psql -U postgres -h localhost -p 5432 -d postgres -c "CREATE DATABASE nexcart_olist;"
+```
+
+```cmd
+psql -U postgres -h localhost -p 5432 -d nexcart_olist -f schema/schema.sql
+```
+
+```cmd
+psql -U postgres -h localhost -p 5432 -d nexcart_olist -c "\copy customers FROM 'dataset_olist/olist_customers_dataset.csv' WITH (FORMAT csv, HEADER true)"
+psql -U postgres -h localhost -p 5432 -d nexcart_olist -c "\copy sellers FROM 'dataset_olist/olist_sellers_dataset.csv' WITH (FORMAT csv, HEADER true)"
+psql -U postgres -h localhost -p 5432 -d nexcart_olist -c "\copy products FROM 'dataset_olist/olist_products_dataset.csv' WITH (FORMAT csv, HEADER true)"
+psql -U postgres -h localhost -p 5432 -d nexcart_olist -c "\copy orders FROM 'dataset_olist/olist_orders_dataset.csv' WITH (FORMAT csv, HEADER true)"
+psql -U postgres -h localhost -p 5432 -d nexcart_olist -c "\copy order_items FROM 'dataset_olist/olist_order_items_dataset.csv' WITH (FORMAT csv, HEADER true)"
+psql -U postgres -h localhost -p 5432 -d nexcart_olist -c "\copy order_payments FROM 'dataset_olist/olist_order_payments_dataset.csv' WITH (FORMAT csv, HEADER true)"
+psql -U postgres -h localhost -p 5432 -d nexcart_olist -c "\copy order_reviews FROM 'dataset_olist/olist_order_reviews_dataset.csv' WITH (FORMAT csv, HEADER true, ENCODING 'LATIN1')"
+```
+
+Verify row counts:
+
+```cmd
+psql -U postgres -h localhost -p 5432 -d nexcart_olist -c "SELECT 'customers' AS table_name, COUNT(*) FROM customers UNION ALL SELECT 'sellers', COUNT(*) FROM sellers UNION ALL SELECT 'products', COUNT(*) FROM products UNION ALL SELECT 'orders', COUNT(*) FROM orders UNION ALL SELECT 'order_items', COUNT(*) FROM order_items UNION ALL SELECT 'order_payments', COUNT(*) FROM order_payments UNION ALL SELECT 'order_reviews', COUNT(*) FROM order_reviews;"
+```
+
+Run SQL files:
+
+```cmd
+psql -U postgres -h localhost -p 5432 -d nexcart_olist -f queries/queries.sql
+psql -U postgres -h localhost -p 5432 -d nexcart_olist -f queries/recommendation_queries.sql
+psql -U postgres -h localhost -p 5432 -d nexcart_olist -f queries/performance.sql > report\performance_output.txt 2>&1
+```
+
+---
+
+## 7. Optional FastAPI Interface
+
+The Streamlit app is the main demo interface. The FastAPI endpoint is included as explicit Python API evidence.
+
+Start the API:
+
+```cmd
+scripts\run_api.cmd
+```
+
+Open:
 
 ```text
 http://127.0.0.1:8000/docs
 ```
 
-### Step 3 - Get recommendations
-
-Use this endpoint:
+Endpoint:
 
 ```text
 GET /recommendations/{customer_id}?top_n=5
 ```
 
-Example:
+CLI test:
 
-```text
-http://127.0.0.1:8000/recommendations/REPLACE_WITH_CUSTOMER_ID?top_n=5
+```cmd
+.venv\Scripts\python.exe -m app.main --customer_id REPLACE_WITH_CUSTOMER_ID --top_n 5
 ```
 
-You can also test from the command line:
+---
 
-```bash
-python -m app.main --customer_id REPLACE_WITH_CUSTOMER_ID --top_n 5
+## 8. Application Features
+
+The Streamlit app contains:
+
+1. Home / project overview
+2. Database summary and table row counts
+3. Customer-based product recommendations
+4. SQL analytics charts
+5. Performance benchmark summary
+6. Stored procedure demo for refreshing recommendation scores
+
+---
+
+## 9. Recommendation Logic
+
+NexCart uses user-based collaborative filtering. The target customer is mapped to `customer_unique_id`, then the system finds products and product categories previously purchased by that customer. It searches for similar customers who bought overlapping products or categories, collects candidate products bought by those similar customers, removes products already purchased by the target customer, and ranks the remaining products.
+
+The main SQL logic uses:
+
+```sql
+SUM(...) OVER (PARTITION BY ...)
+RANK() OVER (...)
+ROW_NUMBER() OVER (PARTITION BY ...)
 ```
 
-## 8. Recommendation Logic
+These are present in `queries/recommendation_queries.sql` and in the SQL query inside `app/recommender.py`.
 
-NexCart uses user-based collaborative filtering. The SQL first finds the selected customer's purchase history using `customer_unique_id`, then identifies other customers who overlap with the target customer by product or product category. Candidate products are taken from these similar customers but products already bought by the target customer are removed.
+---
 
-The final candidates are ranked using SQL window functions:
+## 10. Performance Evidence
 
-- `RANK()` ranks recommendation candidates by similarity weight and purchase frequency.
-- `ROW_NUMBER() OVER (PARTITION BY product_category_name ...)` limits repeated recommendations from the same category.
-
-If the selected customer does not have enough purchase history, the API falls back to globally popular products ranked by sales and revenue.
-
-## 9. Performance Evidence
-
-`queries/performance.sql` contains:
-
-1. Dataset row-count checks
-2. Before-index `EXPLAIN ANALYZE` tests
-3. Index creation statements
-4. After-index `EXPLAIN ANALYZE` tests
-5. Stored procedure creation and execution
-6. Top-N recommendation score query
-
-Indexes used:
+The performance script creates these indexes:
 
 ```sql
 CREATE INDEX IF NOT EXISTS idx_orders_customer_id ON orders(customer_id);
@@ -256,42 +283,37 @@ CREATE INDEX IF NOT EXISTS idx_order_items_seller_id ON order_items(seller_id);
 CREATE INDEX IF NOT EXISTS idx_orders_purchase_timestamp ON orders(order_purchase_timestamp);
 ```
 
-These indexes were selected because the major queries repeatedly join and filter using `customer_id`, `order_id`, `product_id`, `seller_id`, and order purchase timestamps.
+The local benchmark produced these results:
 
-## 10. Stored Procedure
+| Query | Before Index | After Index | Result |
+|---|---:|---:|---|
+| Customer order history | 6.521 ms | 0.162 ms | improved about 40.3x |
+| Top-selling products | 477.947 ms | 305.587 ms | improved about 1.56x |
+| Seller revenue ranking | 69.428 ms | 99.546 ms | slower in this run because the query aggregates almost all rows |
+| Precomputed recommendation scores | - | 42.359 ms | stored score table output |
 
-The stored procedure `refresh_product_recommendation_scores()` refreshes the `product_recommendation_scores` table using the latest records from `order_items`.
+The full captured output is stored in `report/performance_output.txt`.
 
-Run it using:
+---
+
+## 11. Stored Procedure
+
+`queries/performance.sql` creates and runs:
 
 ```sql
 CALL refresh_product_recommendation_scores();
 ```
 
-This procedure modifies data by truncating and repopulating the recommendation score table. It supports recommendation output by maintaining updated product-level popularity and revenue scores.
+This procedure refreshes `product_recommendation_scores` using current order item data. In the captured run, it generated scores for 32,951 products, counted 112,650 units, and produced total counted revenue of 13,591,643.70.
 
-## 11. Demo Video Guide
-
-The demo should show:
-
-1. Repository structure
-2. PostgreSQL tables and row counts
-3. Analytical SQL query execution
-4. Recommendation SQL query or API output
-5. Performance SQL with before/after indexing
-6. Stored procedure execution
-7. Final report overview
-
-A 5-minute speaking script is provided in `demo/demo_script.txt`.
+---
 
 ## 12. AI Usage Disclosure
 
-AI tools were used for brainstorming, debugging SQL/Python structure, drafting documentation, and improving wording in the README and report. All generated code and text were reviewed, edited, and adapted for the NexCart schema and PostgreSQL implementation before submission.
+AI tools were used for brainstorming, debugging, code structuring, README drafting, and report writing support. The project files were reviewed and adapted for the NexCart schema, local PostgreSQL setup, Olist dataset structure, and final DBMS project requirements before submission.
 
-## 13. Limitations
+---
 
-The Olist dataset is historical and does not include live user browsing behavior, cart events, or product images. Therefore, the recommendation system uses transaction-based collaborative filtering rather than real-time behavioral personalization. Some customers have limited purchase history, so the API includes a popularity-based fallback.
+## 13. No Secrets Policy
 
-## 14. Future Work
-
-Future improvements can include product embeddings, category translation, inventory extensions, user browsing events, and a web frontend for interactive recommendations.
+No passwords or API keys should be committed. Local database credentials must stay in `.env`, which is excluded by `.gitignore`. Use `.env.example` only as a template.

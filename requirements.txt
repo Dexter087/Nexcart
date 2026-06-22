@@ -1,4 +1,6 @@
-fastapi
-uvicorn[standard]
-psycopg2-binary
-python-dotenv
+streamlit>=1.32
+pandas>=2.0
+psycopg2-binary>=2.9
+python-dotenv>=1.0
+fastapi>=0.100
+uvicorn>=0.20

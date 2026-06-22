@@ -1,0 +1,22 @@
+digraph NexCartER {
+  graph [rankdir=LR, bgcolor="white", pad="0.2", nodesep="0.55", ranksep="0.7"];
+  node [shape=record, style="rounded,filled", fillcolor="#F6FAFF", color="#2D4F6C", fontname="Arial", fontsize=10];
+  edge [color="#2D4F6C", fontname="Arial", fontsize=9];
+
+  customers [label="{customers|PK customer_id\lcustomer_unique_id\lcustomer_zip_code_prefix\lcustomer_city\lcustomer_state\l}"];
+  sellers [label="{sellers|PK seller_id\lseller_zip_code_prefix\lseller_city\lseller_state\l}"];
+  products [label="{products|PK product_id\lproduct_category_name\lproduct_name_length\lproduct_description_length\lproduct_photos_qty\lproduct_weight_g\lproduct_length_cm\lproduct_height_cm\lproduct_width_cm\l}"];
+  orders [label="{orders|PK order_id\lFK customer_id\lorder_status\lorder_purchase_timestamp\lorder_approved_at\lorder_delivered_carrier_date\lorder_delivered_customer_date\lorder_estimated_delivery_date\l}"];
+  order_items [label="{order_items|PK order_id + order_item_id\lFK product_id\lFK seller_id\lshipping_limit_date\lprice\lfreight_value\l}"];
+  order_payments [label="{order_payments|PK order_id + payment_sequential\lpayment_type\lpayment_installments\lpayment_value\l}"];
+  order_reviews [label="{order_reviews|PK review_id + order_id\lreview_score\lreview_comment_title\lreview_comment_message\lreview_creation_date\lreview_answer_timestamp\l}"];
+  rec_scores [label="{product_recommendation_scores|PK/FK product_id\ltotal_units_sold\ltotal_revenue\lrecommendation_score\llast_refreshed\l}", fillcolor="#FFF8E8"];
+
+  customers -> orders [label="1 to many"];
+  orders -> order_items [label="1 to many"];
+  products -> order_items [label="1 to many"];
+  sellers -> order_items [label="1 to many"];
+  orders -> order_payments [label="1 to many"];
+  orders -> order_reviews [label="1 to many"];
+  products -> rec_scores [label="1 to 0/1"];
+}
