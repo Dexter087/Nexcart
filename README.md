@@ -246,6 +246,16 @@ CLI test:
 .venv\Scripts\python.exe -m app.main --customer_id REPLACE_WITH_CUSTOMER_ID --top_n 5
 ```
 
+### Generate a random customer ID for testing
+
+To prove that the recommendation output is not fixed, generate a random valid customer ID from the loaded PostgreSQL database.
+
+For Command Prompt on Windows:
+
+```cmd
+set PATH=%PATH%;C:\Program Files\PostgreSQL\18\bin
+psql -U postgres -h localhost -p 5432 -d nexcart_olist -At -c "SELECT c.customer_id FROM customers c JOIN orders o ON c.customer_id = o.customer_id JOIN order_items oi ON o.order_id = oi.order_id WHERE o.order_status IN ('delivered', 'shipped', 'invoiced', 'processing') GROUP BY c.customer_id ORDER BY RANDOM() LIMIT 1;"
+
 ---
 
 ## 8. Application Features
