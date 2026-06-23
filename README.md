@@ -5,6 +5,7 @@
 **Database:** PostgreSQL  
 **Application:** Streamlit dashboard + optional FastAPI endpoint  
 **Repository:** https://github.com/Dexter087/Nexcart.git
+**Application Link:** https://nexcart-phjfhezuxp7vkmsxzcgqyc.streamlit.app/
 
 ## Team Members
 
